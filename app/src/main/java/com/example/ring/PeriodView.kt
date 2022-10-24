@@ -1,5 +1,6 @@
 package com.example.ring
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -11,6 +12,7 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.animation.addListener
 import kotlin.math.abs
 import kotlin.math.atan
 import kotlin.math.cos
@@ -83,6 +85,8 @@ class PeriodView @JvmOverloads constructor(
         )
     }
 
+    // 上次点击的位置，动画需要
+    private var oldClickIndex = 0
 
     private val indicatorBitmap by lazy {
         context.createBitmapFromLocal(158.dp, 170.dp, R.drawable.home_btn_selected_bg)
@@ -280,7 +284,7 @@ class PeriodView @JvmOverloads constructor(
     // 排卵期
     private fun drawOvulationBitmap(canvas: Canvas, index: Int) {
         canvas.save()
-        canvas.rotate(6f * index, centerX, centerY)
+        canvas.rotate(360f/pointNum * index, centerX, centerY)
         canvas.drawBitmap(ovulationBitmap, srcOvuRect, destOvuRect, bgPaint)
         canvas.restore()
     }
@@ -288,25 +292,25 @@ class PeriodView @JvmOverloads constructor(
     // 经期
     private fun drawMenstruationFillArc(canvas: Canvas) {
         arcFillPaint.color = Color.parseColor("#F7599C")
-        canvas.drawArc(periodRect, -90f, 6f * 5, false, arcFillPaint)
+        canvas.drawArc(periodRect, -90f, 360f/pointNum  * 5, false, arcFillPaint)
         drawMenstruationFillText(canvas, 0, 5)
     }
 
     private fun drawBottomText(canvas: Canvas, index: Int) {
-        val pointXY = getPointXY(6f * index)
+        val pointXY = getPointXY(360f/pointNum  * index)
         val baseLineY = pointXY.second - bottomFontMetrics.top / 1.4f
         canvas.drawText("16", pointXY.first, baseLineY, bottomTextPaint)
     }
 
     private fun drawTopText(canvas: Canvas, index: Int) {
-        val pointXY = getPointXY(6f * index)
+        val pointXY = getPointXY(360f/pointNum  * index)
         val baseLineY = pointXY.second - topFontMetrics.bottom
         canvas.drawText("Fri", pointXY.first, baseLineY, topTextPaint)
     }
 
     //预测易孕期
     private fun drawPregnancyStrokeArc(canvas: Canvas) {
-        val startAngle = 6f * 20
+        val startAngle = 360f/pointNum  * 20
         val sweetAngle = 3f * 10
         val realStartAngel = 90f + startAngle
         val realEndAngel = 90f + startAngle + sweetAngle
@@ -342,14 +346,14 @@ class PeriodView @JvmOverloads constructor(
     //易孕期孕期弧形
     private fun drawPregnancyFillArc(canvas: Canvas) {
         arcFillPaint.color = Color.parseColor("#77D0DD")
-        canvas.drawArc(periodRect, 0f, 6f * 10, false, arcFillPaint)
+        canvas.drawArc(periodRect, 0f, 360f/pointNum  * 10, false, arcFillPaint)
         // 圆弧填充的首尾文字
         drawPregnancyFillText(canvas, 15, 25)
     }
 
     private fun drawIndicator(canvas: Canvas) {
         canvas.save()
-        canvas.rotate(6f * clickIndex, centerX, centerY)
+        canvas.rotate(360f/pointNum  * clickIndex, centerX, centerY)
         canvas.drawBitmap(indicatorBitmap, srcIndicatorRect, destIndicatorRectF, bgPaint)
         canvas.restore()
 
@@ -363,7 +367,7 @@ class PeriodView @JvmOverloads constructor(
     private fun drawClickRing(canvas: Canvas) {
         val radius = 33f.dp / 2
         canvas.save()
-        canvas.rotate(6f * clickIndex, centerX, centerY)
+        canvas.rotate(360f/pointNum  * clickIndex, centerX, centerY)
         canvas.drawCircle(centerX, centerY - arcRectRadius, radius, clickPaint)
         canvas.restore()
     }
@@ -389,7 +393,7 @@ class PeriodView @JvmOverloads constructor(
                     // 判断角度在哪个点的范围
                     clickIndex = (downAngle / 6).roundToInt()
                     Log.d("fnh", "角度属于位置：$clickIndex")
-                    invalidate()
+                    startIndicatorAnimator()
                     downRealAngle = realAngle
                     Log.d(
                         "fnh",
@@ -561,4 +565,20 @@ class PeriodView @JvmOverloads constructor(
     }
 
 
+    private fun startIndicatorAnimator() {
+        // 倒回去
+        if (clickIndex < oldClickIndex) {
+
+        }
+        val valueAnimation = ValueAnimator.ofInt(oldClickIndex, clickIndex)
+        valueAnimation.addUpdateListener {
+            clickIndex = it.animatedValue as Int
+            invalidate()
+        }
+        valueAnimation.addListener(onStart = {
+            oldClickIndex = clickIndex
+        })
+        valueAnimation.duration = 300
+        valueAnimation.start()
+    }
 }
